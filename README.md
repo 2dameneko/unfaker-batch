@@ -1,4 +1,4 @@
-# unfake-batch
+# unfaker-batch
 
 A Python script for batch processing images (or single images) into optimized pixel art using the powerful [unfake.py](https://github.com/painebenjamin/unfake.py) library. This tool adds convenient batch processing capabilities and automatic 8x nearest-neighbor upscaling for better previewing, making it easy to convert entire folders of AI-generated or other images into clean, retro-style pixel art.
 
@@ -12,12 +12,12 @@ A Python script for batch processing images (or single images) into optimized pi
 
 ## Installation
 
-1.  **Install `unfake.py`:** This project relies on the `unfake` library.
+1.  **Download `unfaker-batch`:** Clone this repository.
+2.  **Install:** 
     ```bash
     pip install -r requirements.txt
     ```
     This will also install necessary dependencies like Pillow and unfake.
-2.  **Download `unfake-batch`:** Clone this repository.
 
 ## Usage
 
