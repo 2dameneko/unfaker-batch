@@ -17,7 +17,8 @@ Options:
   -u SUFFIX, --upscaled-suffix SUFFIX
                         Suffix for the upscaled output filename (default: '_8x').
   --upscale-only        Only perform 4x nearest neighbor upscale, skip unfake processing.
-  --no-save-main        Do not save the main unfake processed image, only the upscaled one.
+  --no-save-main        Do not save the main unfaked processed image.
+  --no-save-upscaled    Do not save the upscaled unfaked processed image.
   -c COLORS, --colors COLORS
                         Maximum number of colors (default: auto-detect).
   --auto-colors         Auto-detect optimal color count.
@@ -142,26 +143,29 @@ def process_single_image(
             # if processed_pil_image.mode == 'RGBA' and input_file.suffix.lower() in ['.jpg', '.jpeg']:
             #      logger.info(f"Processed image is RGBA, original was JPEG. Saving as RGBA PNG: {output_path_main}")
 
-            if args.save_main: # Check the new flag
+            if not args.no_save_main:
                 processed_pil_image.save(output_path_main)
                 logger.info(f"Saved unfake processed image (PNG) to '{output_path_main}'")
             else:
                  logger.info(f"Skipping save of main unfake processed image (--no-save-main).")
 
-            # --- 3. Upscale the unfake processed image ---
-            upscaled_image = upscale_nearest_neighbor(processed_pil_image, 8)
+            if not args.no_save_upscaled:
+                  # --- 3. Upscale the unfake processed image ---
+                upscaled_image = upscale_nearest_neighbor(processed_pil_image, 8)
 
-            # Determine upscaled file extension (use original if it's a common one that supports alpha, otherwise PNG)
-            original_ext = input_file.suffix.lower()
-            if original_ext in ['.png', '.tiff', '.tif']:
-                 output_ext_upscaled = original_ext
-            else: # Default to PNG for upscaled if original format is lossy or doesn't handle alpha well for our use case
-                 output_ext_upscaled = ".png" # Or keep as original_ext if you prefer, but PNG is safer for transparency.
+                # Determine upscaled file extension (use original if it's a common one that supports alpha, otherwise PNG)
+                original_ext = input_file.suffix.lower()
+                if original_ext in ['.png', '.tiff', '.tif']:
+                    output_ext_upscaled = original_ext
+                else: # Default to PNG for upscaled if original format is lossy or doesn't handle alpha well for our use case
+                    output_ext_upscaled = ".png" # Or keep as original_ext if you prefer, but PNG is safer for transparency.
 
-            output_filename_upscaled = f"{args.output_prefix}{base_name}{args.upscaled_suffix}{output_ext_upscaled}"
-            output_path_upscaled = input_file.parent / output_filename_upscaled
-            upscaled_image.save(output_path_upscaled)
-            logger.info(f"Saved 8x upscaled image to '{output_path_upscaled}'")
+                output_filename_upscaled = f"{args.output_prefix}{base_name}{args.upscaled_suffix}{output_ext_upscaled}"
+                output_path_upscaled = input_file.parent / output_filename_upscaled
+                upscaled_image.save(output_path_upscaled)
+                logger.info(f"Saved 8x upscaled image to '{output_path_upscaled}'")
+            else:
+                 logger.info(f"Skipping save of upscaled unfake processed image (--no-save-upscale).")                  
 
         # --- 4. If upscale-only, upscale the original ---
         else:
@@ -223,11 +227,18 @@ def main():
     )
     # Argument for saving the main file
     parser.add_argument(
-        "-sm", "--save-main",
-        dest='save_main', # Name of the attribute
-        action='store_false',
+        "-nsm", "--no-save-main",
+        dest='no_save_main', # Name of the attribute
+        action='store_true',
         default=False, # Default is False
-        help="Save the main unfake processed image (default: False)."
+        help="Do not save the main unfaked processed image. (default: False)."
+    )
+    parser.add_argument(
+        "-nsu", "--no-save-upscaled",
+        dest='no_save_upscaled', # Name of the attribute
+        action='store_true',
+        default=False, # Default is False
+        help="Do not save the upscaled unfaked processed image. (default: False)."
     )
     # Arguments passed directly to unfake
     parser.add_argument(
