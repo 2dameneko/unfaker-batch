@@ -1,3 +1,4 @@
+# unfaker-batch.py v0.2
 """
 Advanced Pixel Art Converter using unfake.py
 
@@ -16,7 +17,7 @@ Options:
                         Prefix for output filenames (default: 'pixelart_').
   -u SUFFIX, --upscaled-suffix SUFFIX
                         Suffix for the upscaled output filename (default: '_8x').
-  --upscale-only        Only perform 4x nearest neighbor upscale, skip unfake processing.
+  --upscale-only        Only perform 8x nearest neighbor upscale, skip unfake processing.
   --no-save-main        Do not save the main unfaked processed image.
   --no-save-upscaled    Do not save the upscaled unfaked processed image.
   -c COLORS, --colors COLORS
@@ -26,7 +27,7 @@ Options:
                         Manual scale override.
   -d {auto,runs,edge}, --detect {auto,runs,edge}
                         Scale detection method (default: auto).
-  -m {dominant,median,mode,mean,nearest,content-adaptive}, --method {dominant,median,mode,mean,nearest,content-adaptive}
+  -m {dominant,median,mode,mean,nearest,content-adaptive,hybrid}, --method {dominant,median,mode,mean,nearest,content-adaptive,hybrid}
                         Downscaling method (default: dominant).
   --threshold THRESHOLD
                         Dominant color threshold (default: 0.05).
@@ -35,6 +36,11 @@ Options:
   --alpha-threshold ALPHA_THRESHOLD
                         Alpha binarization threshold (default: 128).
   --no-snap             Disable grid snapping.
+  --pre-filter          Apply pre-downscale filter.
+  --edge-preserve       Apply edge-preserving refinement.
+  --post-sharpen        Apply post-downscale sharpening.
+  --iterations ITERATIONS
+                        Number of iterations (default: 1).
   -q, --quiet           Suppress output.
   -v, --verbose         Verbose output.
   -h, --help            Show this help message and exit.
@@ -42,10 +48,9 @@ Options:
 
 import argparse
 import logging
-import os
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 # --- Import unfake ---
 try:
@@ -121,6 +126,10 @@ def process_single_image(
                 "alpha_threshold": args.alpha_threshold,
                 "snap_grid": not args.no_snap,
                 "auto_color_detect": args.auto_colors,
+                "pre_filter": args.pre_filter,
+                "edge_preserve": args.edge_preserve,
+                "post_sharpen": args.post_sharpen,
+                "iterations": args.iterations,
             }
 
             # Filter out None values to let unfake use its defaults
@@ -138,11 +147,6 @@ def process_single_image(
             output_filename_main = f"{args.output_prefix}{base_name}{output_ext_main}"
             output_path_main = input_file.parent / output_filename_main
 
-            # Handle potential alpha issues if original was JPEG but output is PNG
-            # (Less critical now as we always save as PNG, but good practice)
-            # if processed_pil_image.mode == 'RGBA' and input_file.suffix.lower() in ['.jpg', '.jpeg']:
-            #      logger.info(f"Processed image is RGBA, original was JPEG. Saving as RGBA PNG: {output_path_main}")
-
             if not args.no_save_main:
                 processed_pil_image.save(output_path_main)
                 logger.info(f"Saved unfake processed image (PNG) to '{output_path_main}'")
@@ -153,12 +157,11 @@ def process_single_image(
                   # --- 3. Upscale the unfake processed image ---
                 upscaled_image = upscale_nearest_neighbor(processed_pil_image, 8)
 
-                # Determine upscaled file extension (use original if it's a common one that supports alpha, otherwise PNG)
                 original_ext = input_file.suffix.lower()
                 if original_ext in ['.png', '.tiff', '.tif']:
                     output_ext_upscaled = original_ext
-                else: # Default to PNG for upscaled if original format is lossy or doesn't handle alpha well for our use case
-                    output_ext_upscaled = ".png" # Or keep as original_ext if you prefer, but PNG is safer for transparency.
+                else: 
+                    output_ext_upscaled = ".png" 
 
                 output_filename_upscaled = f"{args.output_prefix}{base_name}{args.upscaled_suffix}{output_ext_upscaled}"
                 output_path_upscaled = input_file.parent / output_filename_upscaled
@@ -172,11 +175,10 @@ def process_single_image(
             logger.info("Upscale-only mode selected.")
             # Load the original image
             with Image.open(input_file) as original_image:
-                # Convert if necessary for consistency (though NEAREST resize usually handles it)
+                # Convert if necessary for consistency 
                 if original_image.mode not in ("RGB", "RGBA"):
                      original_image = original_image.convert("RGBA")
 
-                # Determine upscaled file extension
                 original_ext = input_file.suffix.lower()
                 if original_ext in ['.png', '.tiff', '.tif', '.webp']:
                      output_ext_upscaled = original_ext
@@ -189,7 +191,7 @@ def process_single_image(
             output_filename_upscaled = f"{args.output_prefix}{base_name}{args.upscaled_suffix}{output_ext_upscaled}"
             output_path_upscaled = input_file.parent / output_filename_upscaled
             upscaled_image.save(output_path_upscaled)
-            logger.info(f"Saved 4x upscaled (original) image to '{output_path_upscaled}'")
+            logger.info(f"Saved 8x upscaled (original) image to '{output_path_upscaled}'")
 
         logger.info(f"Finished processing '{input_file}'\n")
         return True
@@ -201,13 +203,12 @@ def process_single_image(
             traceback.print_exc()
         return False
 
-
 def main():
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(
         description="Advanced Pixel Art Converter using unfake.py",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__[__doc__.find("Usage:"):], # Include usage in help
+        epilog=__doc__[__doc__.find("Usage:"):],
     )
     parser.add_argument("input", help="Input image file or folder.")
     parser.add_argument(
@@ -225,19 +226,18 @@ def main():
         action="store_true",
         help="Only perform 8x nearest neighbor upscale, skip unfake processing."
     )
-    # Argument for saving the main file
     parser.add_argument(
         "-nsm", "--no-save-main",
-        dest='no_save_main', # Name of the attribute
+        dest='no_save_main',
         action='store_true',
-        default=False, # Default is False
+        default=False, 
         help="Do not save the main unfaked processed image. (default: False)."
     )
     parser.add_argument(
         "-nsu", "--no-save-upscaled",
-        dest='no_save_upscaled', # Name of the attribute
+        dest='no_save_upscaled',
         action='store_true',
-        default=False, # Default is False
+        default=False,
         help="Do not save the upscaled unfaked processed image. (default: False)."
     )
     # Arguments passed directly to unfake
@@ -258,7 +258,7 @@ def main():
     parser.add_argument(
         "-m",
         "--method",
-        choices=["dominant", "median", "mode", "mean", "nearest", "content-adaptive"],
+        choices=["dominant", "median", "mode", "mean", "nearest", "content-adaptive", "hybrid"],
         default="dominant",
         help="Downscaling method (default: dominant)",
     )
@@ -274,6 +274,10 @@ def main():
         help="Alpha binarization threshold (default: 128)",
     )
     parser.add_argument("--no-snap", action="store_true", help="Disable grid snapping")
+    parser.add_argument("--pre-filter", action="store_true", help="Apply pre-downscale filter")
+    parser.add_argument("--edge-preserve", action="store_true", help="Apply edge-preserving refinement")
+    parser.add_argument("--post-sharpen", action="store_true", help="Apply post-downscale sharpening")
+    parser.add_argument("--iterations", type=int, default=1, help="Number of iterations (default: 1)")
     parser.add_argument("--quiet", "-q", action="store_true", help="Suppress output")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
@@ -282,14 +286,12 @@ def main():
     # --- Set logging level ---
     if args.quiet:
         logging.getLogger().setLevel(logging.ERROR)
-        # Suppress unfake's output too if quiet
         logging.getLogger("unfake.py").setLevel(logging.ERROR)
     elif args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
         logging.getLogger("unfake.py").setLevel(logging.DEBUG)
     else:
         logging.getLogger().setLevel(logging.INFO)
-        # Default unfake logging level is INFO, which is fine
 
     # --- Parse cleanup options ---
     cleanup_options = {"morph": False, "jaggy": False}
