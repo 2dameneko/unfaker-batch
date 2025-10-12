@@ -1,4 +1,4 @@
-# unfaker-batch.py v0.2
+# unfaker-batch.py v0.3
 """
 Advanced Pixel Art Converter using unfake.py
 
@@ -35,6 +35,12 @@ Options:
   --palette PALETTE     Fixed palette file (hex colors, one per line).
   --alpha-threshold ALPHA_THRESHOLD
                         Alpha binarization threshold (default: 128).
+  --background-tolerance TOLERANCE
+                        Tolerance for transparent background detection (default: 1).
+  --background-mode {edges,corners,midpoints}
+                        Starting mode for transparent background flood-fill (default: 'edges').
+  --transparent-background
+                        Make background transparent using flood-fill.
   --no-snap             Disable grid snapping.
   --pre-filter          Apply pre-downscale filter.
   --edge-preserve       Apply edge-preserving refinement.
@@ -130,6 +136,11 @@ def process_single_image(
                 "edge_preserve": args.edge_preserve,
                 "post_sharpen": args.post_sharpen,
                 "iterations": args.iterations,
+                # --- NEW ARGUMENTS ADDED HERE ---
+                "transparent_background": args.transparent_background,
+                "background_tolerance": args.background_tolerance,
+                "background_mode": args.background_mode,
+                # -----------------------------
             }
 
             # Filter out None values to let unfake use its defaults
@@ -273,6 +284,25 @@ def main():
         default=128,
         help="Alpha binarization threshold (default: 128)",
     )
+    # --- NEW ARGUMENTS ADDED HERE ---
+    parser.add_argument(
+        "--background-tolerance",
+        type=int,
+        default=1,
+        help="Tolerance for transparent background detection (default: 1)."
+    )
+    parser.add_argument(
+        "--background-mode",
+        choices=["edges", "corners", "midpoints"],
+        default="edges",
+        help="Starting mode for transparent background flood-fill (default: 'edges')."
+    )
+    parser.add_argument(
+        "--transparent-background",
+        action="store_true",
+        help="Make background transparent using flood-fill."
+    )
+    # -----------------------------
     parser.add_argument("--no-snap", action="store_true", help="Disable grid snapping")
     parser.add_argument("--pre-filter", action="store_true", help="Apply pre-downscale filter")
     parser.add_argument("--edge-preserve", action="store_true", help="Apply edge-preserving refinement")

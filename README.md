@@ -108,6 +108,7 @@ python unfaker-batch.py <input> [options]
 
 ## Versions
 
+- **v0.3**: Added transparent background support
 - **v0.2**: Switched to enhanced fork [unfake-opt.py](https://github.com/2dameneko/unfake-opt.py), added support for all new options (`hybrid`, `--pre-filter`, `--edge-preserve`, `--iterations`, etc.), and added `--no-save-upscaled`.
 - **v0.1**: Initial release.
 
